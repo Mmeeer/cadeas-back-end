@@ -1,4 +1,6 @@
 #!/usr/bin/env nodejs
+var config = require("./config.js")
+config.setConfig()
 var app = require("express")()
 var server = require('http').Server(app)
 var io = require('socket.io')(server)
@@ -82,7 +84,7 @@ app.post('/login', function(req, res){
             username: doesFound.username,
             password: doesFound.password,
             id: doesFound._id
-          }, "process.env.SECRET_KEY") // i will create this variable
+          }, process.env.SECRET_KEY)
           db.collection('user').findOneAndUpdate({username: req.body.username}, {$set: {token: token}}, function(err, createdUser){
             res.json({
               success: true,
@@ -117,7 +119,7 @@ app.get('/lisa/:id', function(req, res){
               message: "Token is broken!"
             })
           } else {
-            jwt.verify(token, "process.env.SECRET_KEY", function(err, decode){
+            jwt.verify(token, process.env.SECRET_KEY, function(err, decode){
               if(err){
                 res.json({
                   success: false,
@@ -168,7 +170,7 @@ io.on('connection', function(socket){
                 message: "Token is broken!"
               })
             } else {
-              jwt.verify(token, "process.env.SECRET_KEY", function(err, decode){
+              jwt.verify(token, process.env.SECRET_KEY, function(err, decode){
                 if(err){
                   socket.emit('error', {
                     success: false,
@@ -244,7 +246,7 @@ io.on('connection', function(socket){
                 message: "Token is broken!"
               })
             } else {
-              jwt.verify(token, "process.env.SECRET_KEY", function(err, decode){
+              jwt.verify(token, process.env.SECRET_KEY, function(err, decode){
                 if(err){
                   socket.on('error', {
                     success: false,
@@ -297,7 +299,7 @@ io.on('connection', function(socket){
                 message: "Token is broken!"
               })
             } else {
-              jwt.verify(token, "process.env.SECRET_KEY", function(err, decode){
+              jwt.verify(token, process.env.SECRET_KEY, function(err, decode){
                 if(err){
                   socket.on('error', {
                     success: false,
@@ -413,7 +415,7 @@ io.on('connection', function(socket){
                 message: "Token is broken!"
               })
             } else {
-              jwt.verify(token, "process.env.SECRET_KEY", function(err, decode){
+              jwt.verify(token, process.env.SECRET_KEY, function(err, decode){
                 if(err){
                   socket.on('error', {
                     success: false,
