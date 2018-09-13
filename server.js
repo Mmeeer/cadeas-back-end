@@ -285,7 +285,7 @@ app.get("/word/:day/:wordId", function(req, res){
   var token = req.body.token || req.headers['authorization']
   var data = {}
   data.day = String(req.params.day)
-  data.wordId = Number(req.params.wordId)
+  data.wordId = String(req.params.wordId)
   if(token){
     MongoClient.connect("mongodb://localhost:27017", {useNewUrlParser: true}, function(err, client){
       var db = client.db('test_db')
@@ -312,7 +312,7 @@ app.get("/word/:day/:wordId", function(req, res){
               } else {
                 if(decode.username == user.username && decode.password == user.password && decode.id == user._id){
                   console.log(data)
-                  db.collection('words').findOne({'word': user.learning[Number(data.day)].client.words[user.learning[Number(data.day)].client.order[data.wordId]].word})
+                  db.collection('words').findOne({'word': data.wordId})
                   .then(function(theWord){
                     res.json({success:true, theWord})
                   })
@@ -457,7 +457,7 @@ app.get("/progress/:day/:wordId/:result", function(req, res){
                     }
                     size_known = user.learning[Number(data.day)].server.knowwords.length
                     size_master = user.learning[Number(data.day)].server.masteredwords.length
-                    
+
                     console.log(user.learning[Number(data.day)].server.knowwords)
                     console.log(user.learning[Number(data.day)].server.masteredwords)
                     user.learning[Number(data.day)].client.words = []
@@ -532,6 +532,176 @@ app.get("/progress/:day/:wordId/:result", function(req, res){
                   resj.json({
                     success: false,
                     message: "Connection failed!"
+                  })
+                }
+              }
+            })
+          }
+        }
+      })
+    })
+  }
+})
+app.get('/cardgame/:day/:type', function(req, res){
+  var token = req.body.token || req.headers['authorization']
+  if(token){
+    MongoClient.connect("mongodb://localhost:27017", {useNewUrlParser: true}, function(err, client){
+      var db = client.db('test_db')
+      db.collection('user').findOne({'token': token})
+      .then(function(user){
+        if(err){
+          res.json({
+            success: false,
+            message: "Something went wrong on the server"
+          })
+        } else {
+          if(!user){
+            res.json({
+              success: false,
+              message: "Token is broken!"
+            })
+          } else {
+            jwt.verify(token, process.env.SECRET_KEY, function(err, decode){
+              if(err){
+                res.json({
+                  success: false,
+                  message: "Invalid Token!"
+                })
+              } else {
+                if(decode.username == user.username && decode.password == user.password && decode.id == user._id){
+                  console.log("----------hello lisa-----------")
+                  var listst = []
+                  var le = user.list.length
+                  var start = req.params.day * 100;
+                  var end = req.params.day*100 + 100, i;
+                  if(end > le) end = le
+                  for(i = start; i < end; i++){
+                    listst.push(user.list[i])
+                  }
+                  if(req.params.type == 'random'){
+                    var tmp = shuffle(listst, { 'copy': true })
+                    user.learning[Number(req.params.day)] = {data: tmp, now: 0, right: 0, wrong: 0}
+                    db.collection('user').updateOne({username: user.username}, {$set: user}, {upsert: true})
+                    res.json({
+                      success: true,
+                      data: tmp,
+                      right: 0,
+                      wrong: 0,
+                      now: 0
+                    })
+                  }
+                }
+              }
+            })
+          }
+        }
+      })
+    })
+  }
+})
+app.get('/cardgameAns/:day/:ans', function(req, res){
+  var token = req.body.token || req.headers['authorization']
+  if(token){
+    MongoClient.connect("mongodb://localhost:27017", {useNewUrlParser: true}, function(err, client){
+      var db = client.db('test_db')
+      db.collection('user').findOne({'token': token})
+      .then(function(user){
+        if(err){
+          res.json({
+            success: false,
+            message: "Something went wrong on the server"
+          })
+        } else {
+          if(!user){
+            res.json({
+              success: false,
+              message: "Token is broken!"
+            })
+          } else {
+            jwt.verify(token, process.env.SECRET_KEY, function(err, decode){
+              if(err){
+                res.json({
+                  success: false,
+                  message: "Invalid Token!"
+                })
+              } else {
+                if(decode.username == user.username && decode.password == user.password && decode.id == user._id){
+                  console.log("----------hello lisa-----------")
+                  var listst = []
+                  var le = user.list.length
+                  var start = req.params.day * 100;
+                  var end = req.params.day*100 + 100, i;
+                  if(end > le) end = le;
+                  console.log("WTF")
+                  if(req.params.ans == 'itDoes'){
+                    user.learning[Number(req.params.day)].data[user.learning[Number(req.params.day)].now].score++;
+                    user.learning[Number(req.params.day)].data[user.learning[Number(req.params.day)].now].ans = {success: true};
+                    user.learning[Number(req.params.day)].right++;
+                    user.learning[Number(req.params.day)].now++;
+                  } else if(req.params.ans == 'itDoesnt'){
+                    user.learning[Number(req.params.day)].data[user.learning[Number(req.params.day)].now].ans = {success: false};
+                    user.learning[Number(req.params.day)].wrong++;
+                    user.learning[Number(req.params.day)].now++;
+
+                  }
+                  for(i = start; i < end; i++){
+                    if(user.list[i].word == user.learning[Number(req.params.day)].data[user.learning[Number(req.params.day)].now - 1].word){
+                      user.list[i] = user.learning[Number(req.params.day)].data[user.learning[Number(req.params.day)].now - 1];
+                      break;
+                    }
+                  }
+                  db.collection('user').update({username: user.username}, user, {upsert: true})
+                  res.json({
+                    success: true,
+                  })
+                }
+              }
+            })
+          }
+        }
+      })
+    })
+  }
+})
+app.get('/getall/:day', function(req, res){
+  var token = req.body.token || req.headers['authorization']
+  if(token){
+    MongoClient.connect("mongodb://localhost:27017", {useNewUrlParser: true}, function(err, client){
+      var db = client.db('test_db')
+      db.collection('user').findOne({'token': token})
+      .then(function(user){
+        if(err){
+          res.json({
+            success: false,
+            message: "Something went wrong on the server"
+          })
+        } else {
+          if(!user){
+            res.json({
+              success: false,
+              message: "Token is broken!"
+            })
+          } else {
+            jwt.verify(token, process.env.SECRET_KEY, function(err, decode){
+              if(err){
+                res.json({
+                  success: false,
+                  message: "Invalid Token!"
+                })
+              } else {
+                if(decode.username == user.username && decode.password == user.password && decode.id == user._id){
+                  console.log("----------hello lisa-----------")
+                  var listst = []
+                  var le = user.list.length
+                  var start = req.params.day * 100;
+                  var end = req.params.day*100 + 100, i;
+                  if(end > le) end = le
+                  for(i = start; i < end; i++){
+                    listst.push(user.list[i])
+                  }
+                  res.json({
+                    success: true,
+                    data: {success: true, list: listst}
                   })
                 }
               }
@@ -831,7 +1001,7 @@ app.get("/progress/:day/:wordId/:result", function(req, res){
 //                       }
 //                       size_known = user.learning[Number(data.day)].server.knowwords.length
 //                       size_master = user.learning[Number(data.day)].server.masteredwords.length
-                      
+
 //                       console.log(user.learning[Number(data.day)].server.knowwords)
 //                       console.log(user.learning[Number(data.day)].server.masteredwords)
 //                       user.learning[Number(data.day)].client.words = []
